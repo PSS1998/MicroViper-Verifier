@@ -429,7 +429,8 @@ impl<'a> AnalysisContext<'a> {
                     invariants: invariants.clone(),
                     body,
                 })
-            }
+            },
+            Statement::Choice(_, _) => todo!()
         }
     }
 
