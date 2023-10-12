@@ -26,6 +26,7 @@ mod ast_ext;
 mod parse;
 mod sem;
 mod core_1;
+mod ivl0;
 
 use miette::IntoDiagnostic;
 
@@ -49,10 +50,13 @@ pub fn parse_file(f: impl AsRef<std::path::Path>) -> miette::Result<ast::Documen
     let ast = parse::parse_document(&src)?;
 
     println!("{src}");
+    let mut src_clone = src.clone(); // Clone src
 
-    core_1::encode(&ast)
+    core_1::encode(&ast);
+
+    ivl0::encode(&ast)
         .with_context(|| format!("Parsing {f:?}"))
-        .map_err(|e| e.with_source_code(src))
+        .map_err(|e| e.with_source_code(src_clone))
 }
 /// Parse and statically analyze a string. The returned document type-checks and
 /// contains no illegal assignments or references.
