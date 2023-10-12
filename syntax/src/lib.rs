@@ -47,7 +47,9 @@ pub fn parse_file(f: impl AsRef<std::path::Path>) -> miette::Result<ast::Documen
         .into_diagnostic()
         .with_context(|| format!("Reading file {f:?}"))?;
     let ast = parse::parse_document(&src)?;
-    println!("Hello{ast:#?}");
+
+    println!("{src}");
+
     core_1::encode(&ast)
         .with_context(|| format!("Parsing {f:?}"))
         .map_err(|e| e.with_source_code(src))
