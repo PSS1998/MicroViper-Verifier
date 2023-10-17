@@ -1,0 +1,18 @@
+method triple(x: Int, flag: Bool) {
+    var a: Int
+    var b: Int
+    a := 1+b
+    a := b
+
+    if (flag) {
+        var c: Int
+        c := a+b
+        a:=1
+    }
+    else{
+        a:=3
+    }
+
+    b:=a
+
+}
