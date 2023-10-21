@@ -733,6 +733,7 @@ dependencies = [
  "once_cell",
  "regex",
  "thiserror",
+ "z3",
 ]
 
 [[package]]

@@ -27,6 +27,7 @@ mod parse;
 mod sem;
 mod core_1;
 mod ivl0;
+mod transform_to_z3;
 
 use miette::IntoDiagnostic;
 
@@ -78,4 +79,8 @@ pub fn encode1(ast: ast::Document) -> miette::Result<ast::Document> {
 
 pub fn encode2(ast: ast::Document) -> miette::Result<ast::Document> {
     ivl0::encode(&ast)
+}
+
+pub fn encode3(ast: ast::Document) -> miette::Result<ast::Document> {
+    transform_to_z3::encode(&ast)
 }
