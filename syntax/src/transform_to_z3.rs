@@ -1,5 +1,5 @@
 use z3::{ast::Bool, ast::Int, SatResult, ast::Ast, Context};
-use crate::ast::{Document, DocumentItem, Statement, Expr, ExprKind, Op, UOp, Type, EK, Body};
+use crate::ast::{Document, DocumentItem, Statement, Expr, ExprKind, Op, UOp, Type, EK, Body, Span};
 use std::fs::File;
 use std::io::Write;
 use std::fs::OpenOptions;
@@ -29,6 +29,8 @@ impl transform_to_z3 {
 
         let assumes_and_asserts_map = Self::collect_assumes_and_asserts(&mut new_doc)?;
 
+        let mut spans: Vec<Span> = Vec::new();
+
         let mut all_methods_verified = true;
         for (method_name, paths) in &assumes_and_asserts_map {
 
@@ -50,6 +52,7 @@ impl transform_to_z3 {
                 // println!("{z3_vars:#?}");
 
                 let final_conditions = Self::translate_statements_to_z3(&assumes_and_asserts, &ctx);
+                let final_conditions_span = Self::extract_spans_from_statements(&assumes_and_asserts);
 
                 if final_conditions.is_empty() {
                     // If there are no Assert statements, return the combined Assume conditions.
@@ -64,7 +67,7 @@ impl transform_to_z3 {
                             match solver.check() {
                                 SatResult::Sat => {}, // The combined Assume conditions are satisfiable
                                 _ => {
-                                    all_methods_verified = false
+                                    all_methods_verified = false;
                                 },
                             }
                             solver.pop(1); // Revert the solver to the saved state
@@ -74,7 +77,7 @@ impl transform_to_z3 {
                 } else {
                     let mut all_unsatisfiable = true; // assume all conditions are unsatisfiable to begin with
                     
-                    for condition in &final_conditions {
+                    for (index, condition) in final_conditions.iter().enumerate() {
                         match condition {
                             Z3Ast::Bool(cond) => {
                                 let not_condition = !cond.clone(); // Negate the condition
@@ -85,12 +88,14 @@ impl transform_to_z3 {
                                     SatResult::Unsat => {} // This is expected, continue to the next condition
                                     SatResult::Sat => {
                                         all_unsatisfiable = false;
-                                        break; // break out of the loop as we found a satisfiable condition
+                                        spans.push(final_conditions_span[index].clone());
+                                        // break; // break out of the loop as we found a satisfiable condition
                                     }
                                     _ => {
                                         println!("Unknown result from solver");
                                         all_unsatisfiable = false;
-                                        break;
+                                        spans.push(final_conditions_span[index].clone());
+                                        // break;
                                     }
                                 }
                                 solver.pop(1); // Revert the solver to the saved state
@@ -110,6 +115,7 @@ impl transform_to_z3 {
             println!("Verified");
         } else {
             println!("Unverified");
+            println!("{spans:#?}");
         }
 
         // println!("{assumes_and_asserts:#?}");
@@ -364,6 +370,9 @@ impl transform_to_z3 {
     
                     let combined_assume = assume_conditions.iter().fold(Bool::from_bool(ctx, true), |acc, x| Bool::and(ctx, &[&acc, x]));
                     result_conditions.push(Z3Ast::Bool(combined_assume.implies(assert_val)));
+
+                    // Add the assertion condition to the list of assumptions after processing the assertion
+                    assume_conditions.push(assert_val.clone());
                 }
                 _ => {} 
             }
@@ -376,6 +385,22 @@ impl transform_to_z3 {
         // }
 
         result_conditions
+    }
+
+    fn extract_spans_from_statements(statements: &Vec<Statement>) -> Vec<Span> {
+        let mut result_spans: Vec<Span> = Vec::new();
+        
+        for statement in statements {
+            match statement {
+                // When you encounter an Assert statement, push its span to the results.
+                Statement::Assert(expr) => {
+                    result_spans.push(expr.span.clone());
+                }
+                _ => {} 
+            }
+        }
+    
+        result_spans
     }
 
     fn translate_statements_with_no_assert_to_z3<'a>(statements: &Vec<Statement>, ctx: &'a Context) -> Vec<Z3Ast<'a>> {
@@ -399,6 +424,22 @@ impl transform_to_z3 {
         // Combine all the Assume conditions.
         let combined_assume = assume_conditions.iter().fold(Bool::from_bool(ctx, true), |acc, x| Bool::and(ctx, &[&acc, x]));
         vec![Z3Ast::Bool(combined_assume)]
+    }
+
+    fn extract_spans_from_statements_with_no_assert(statements: &Vec<Statement>) -> Vec<Span> {
+        let mut result_spans: Vec<Span> = Vec::new();
+        
+        for statement in statements {
+            match statement {
+                // When you encounter an Assume statement, push its span to the results.
+                Statement::Assume(expr) => {
+                    result_spans.push(expr.span.clone());
+                }
+                _ => {} 
+            }
+        }
+    
+        result_spans
     }
     
 }
