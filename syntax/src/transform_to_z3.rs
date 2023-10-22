@@ -1,5 +1,5 @@
 use z3::{ast::Bool, ast::Int, SatResult, ast::Ast, Context};
-use crate::ast::{Document, DocumentItem, Statement, Expr, ExprKind, Op, UOp, Type, EK};
+use crate::ast::{Document, DocumentItem, Statement, Expr, ExprKind, Op, UOp, Type, EK, Body};
 use std::fs::File;
 use std::io::Write;
 use std::fs::OpenOptions;
@@ -30,76 +30,79 @@ impl transform_to_z3 {
         let assumes_and_asserts_map = Self::collect_assumes_and_asserts(&mut new_doc)?;
 
         let mut all_methods_verified = true;
-        for (method_name, assumes_and_asserts) in &assumes_and_asserts_map {
+        for (method_name, paths) in &assumes_and_asserts_map {
 
-            // println!("{assumes_and_asserts:#?}");
+            for assumes_and_asserts in paths {
 
-            let cfg = z3::Config::new();
-            let ctx = z3::Context::new(&cfg);
-            let solver = z3::Solver::new(&ctx);
-            
-            // let x = Int::new_const(&ctx, "x");
-            // let r = Int::new_const(&ctx, "r");
-            let variables = Self::extract_variables(&assumes_and_asserts);
-            let mut z3_vars = HashMap::new();
-            for var_name in variables.iter() {
-                z3_vars.insert(var_name.clone(), Int::new_const(&ctx, &**var_name));
-            }
-            // println!("{z3_vars:#?}");
+                // println!("{assumes_and_asserts:#?}");
 
-            let final_conditions = Self::translate_statements_to_z3(&assumes_and_asserts, &ctx);
-
-            if final_conditions.is_empty() {
-                // If there are no Assert statements, return the combined Assume conditions.
-                let final_conditions = Self::translate_statements_with_no_assert_to_z3(&assumes_and_asserts, &ctx);
-
-                let condition = &final_conditions[0];
-                match condition {
-                    Z3Ast::Bool(cond) => {
-                        println!("{cond:#?}");
-                        solver.push(); // Save the current state of the solver
-                        solver.assert(cond);
-                        match solver.check() {
-                            SatResult::Sat => {}, // The combined Assume conditions are satisfiable
-                            _ => {
-                                all_methods_verified = false
-                            },
-                        }
-                        solver.pop(1); // Revert the solver to the saved state
-                    }
-                    _ => panic!("Expected Bool type for final condition"),
-                }
-            } else {
-                let mut all_unsatisfiable = true; // assume all conditions are unsatisfiable to begin with
+                let cfg = z3::Config::new();
+                let ctx = z3::Context::new(&cfg);
+                let solver = z3::Solver::new(&ctx);
                 
-                for condition in &final_conditions {
+                // let x = Int::new_const(&ctx, "x");
+                // let r = Int::new_const(&ctx, "r");
+                let variables = Self::extract_variables(&assumes_and_asserts);
+                let mut z3_vars = HashMap::new();
+                for var_name in variables.iter() {
+                    z3_vars.insert(var_name.clone(), Int::new_const(&ctx, &**var_name));
+                }
+                // println!("{z3_vars:#?}");
+
+                let final_conditions = Self::translate_statements_to_z3(&assumes_and_asserts, &ctx);
+
+                if final_conditions.is_empty() {
+                    // If there are no Assert statements, return the combined Assume conditions.
+                    let final_conditions = Self::translate_statements_with_no_assert_to_z3(&assumes_and_asserts, &ctx);
+
+                    let condition = &final_conditions[0];
                     match condition {
                         Z3Ast::Bool(cond) => {
-                            let not_condition = !cond.clone(); // Negate the condition
-                            println!("{not_condition:#?}");
+                            println!("{cond:#?}");
                             solver.push(); // Save the current state of the solver
-                            solver.assert(&not_condition);
+                            solver.assert(cond);
                             match solver.check() {
-                                SatResult::Unsat => {} // This is expected, continue to the next condition
-                                SatResult::Sat => {
-                                    all_unsatisfiable = false;
-                                    break; // break out of the loop as we found a satisfiable condition
-                                }
+                                SatResult::Sat => {}, // The combined Assume conditions are satisfiable
                                 _ => {
-                                    println!("Unknown result from solver");
-                                    all_unsatisfiable = false;
-                                    break;
-                                }
+                                    all_methods_verified = false
+                                },
                             }
                             solver.pop(1); // Revert the solver to the saved state
                         }
                         _ => panic!("Expected Bool type for final condition"),
                     }
+                } else {
+                    let mut all_unsatisfiable = true; // assume all conditions are unsatisfiable to begin with
+                    
+                    for condition in &final_conditions {
+                        match condition {
+                            Z3Ast::Bool(cond) => {
+                                let not_condition = !cond.clone(); // Negate the condition
+                                println!("{not_condition:#?}");
+                                solver.push(); // Save the current state of the solver
+                                solver.assert(&not_condition);
+                                match solver.check() {
+                                    SatResult::Unsat => {} // This is expected, continue to the next condition
+                                    SatResult::Sat => {
+                                        all_unsatisfiable = false;
+                                        break; // break out of the loop as we found a satisfiable condition
+                                    }
+                                    _ => {
+                                        println!("Unknown result from solver");
+                                        all_unsatisfiable = false;
+                                        break;
+                                    }
+                                }
+                                solver.pop(1); // Revert the solver to the saved state
+                            }
+                            _ => panic!("Expected Bool type for final condition"),
+                        }
+                    }
+                    
+                    if !all_unsatisfiable {
+                        all_methods_verified = false;
+                    } 
                 }
-                
-                if !all_unsatisfiable {
-                    all_methods_verified = false;
-                } 
             }
         }
 
@@ -157,30 +160,58 @@ impl transform_to_z3 {
         }
     }
 
-    fn collect_assumes_and_asserts(doc: &mut Document) -> miette::Result<HashMap<String, Vec<Statement>>> {
-        let mut method_statements: HashMap<String, Vec<Statement>> = HashMap::new();
-        
-        for item in &mut doc.items {
+    fn collect_from_body(body: &Body, prev_statements: &mut Vec<Statement>) -> Vec<Vec<Statement>> {
+        let mut paths: Vec<Vec<Statement>> = Vec::new();
+    
+        let mut current_statements = prev_statements.clone();
+    
+        for stmt in &body.statements {
+            match stmt {
+                Statement::Assert(_) | Statement::Assume(_) => {
+                    current_statements.push(stmt.clone());
+                },
+                Statement::If(_, if_body, opt_else_body) => {
+                    paths.append(&mut Self::collect_from_body(if_body, &mut current_statements));
+                    if let Some(else_body) = opt_else_body {
+                        paths.append(&mut Self::collect_from_body(else_body, &mut current_statements));
+                    }
+                },
+                Statement::While { body: while_body, .. } => {
+                    paths.append(&mut Self::collect_from_body(while_body, &mut current_statements));
+                },
+                Statement::Choice(choice_body1, choice_body2) => {
+                    let mut path1 = Self::collect_from_body(choice_body1, &mut current_statements.clone());
+                    let mut path2 = Self::collect_from_body(choice_body2, &mut current_statements.clone());
+    
+                    paths.append(&mut path1);
+                    paths.append(&mut path2);
+                },
+                _ => {}
+            }
+        }
+    
+        if paths.is_empty() {
+            paths.push(current_statements);
+        }
+    
+        paths
+    }
+    
+    fn collect_assumes_and_asserts(doc: &mut Document) -> miette::Result<HashMap<String, Vec<Vec<Statement>>>> {
+        let mut method_statements: HashMap<String, Vec<Vec<Statement>>> = HashMap::new();
+    
+        for item in &doc.items {
             if let DocumentItem::Method(method) = item {
-                let mut list: Vec<Statement> = Vec::new();
+                let mut prev_statements: Vec<Statement> = Vec::new();
     
-                if let Some(body) = &mut method.body {
-                    body.statements = body.statements.iter()
-                        .filter_map(|stmt| {
-                            match Self::encode_stmt(stmt, &mut list) {
-                                Ok(s) => Some(s),
-                                Err(e) => {
-                                    // Handle or log the error
-                                    println!("Error processing statement: {}", e);
-                                    None
-                                }
-                            }
-                        })
-                        .collect();
-                }
-    
+                let paths = if let Some(body) = &method.body {
+                    Self::collect_from_body(body, &mut prev_statements)
+                } else {
+                    Vec::new()
+                };
+                
                 // Assuming method has a name field or something similar
-                method_statements.insert(method.name.text.clone(), list);
+                method_statements.insert(method.name.text.clone(), paths);
             }
         }
         
@@ -228,7 +259,14 @@ impl transform_to_z3 {
             EK::Boolean(b) => Z3Ast::Bool(Bool::from_bool(ctx, *b)),
             // EK::Integer(i) => Z3Ast::Int(Int::from_str(ctx, &i.to_string())),
             EK::Integer(i) => Z3Ast::Int(Int::from_str(ctx, &i.to_string()).unwrap()),
-            EK::Var(ident) => Z3Ast::Int(Int::new_const(ctx, &*ident.text)),
+            EK::Var(ident) => {
+                match expr.ty {
+                    Type::Bool => Z3Ast::Bool(Bool::new_const(ctx, &*ident.text)),
+                    Type::Int => Z3Ast::Int(Int::new_const(ctx, &*ident.text)),
+                    // Handle other types as necessary...
+                    _ => panic!("Unsupported type for variable {}", ident.text),
+                }
+            },
             EK::Unary(op, subexpr) => {
                 let translated_subexpr = Self::translate_expr_to_z3(subexpr, ctx);
                 match op {
@@ -309,7 +347,10 @@ impl transform_to_z3 {
                     let assume_val = match &z3_expr {
                         Z3Ast::Bool(val) => val.clone(),
                         // handle other variants if necessary...
-                        _ => panic!("Expected a boolean expression"),
+                        _ => {
+                            println!("{z3_expr:#?}");
+                            panic!("Expected a boolean expression");
+                        },
                     };
                     assume_conditions.push(assume_val);
                 }
