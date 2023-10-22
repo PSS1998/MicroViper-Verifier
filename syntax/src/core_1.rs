@@ -57,44 +57,60 @@ impl Encode1Context {
         Ok(doc.clone())
     }
 
-    fn replace_if(doc: &mut Document) -> miette::Result<Document>{
+    fn replace_if_recursive(stmt: &mut Statement) {
+        match stmt {
+            Statement::If(cond, then_body, else_body) => {
+                Self::replace_if_in_body(then_body);
+                if let Some(else_b) = else_body {
+                    Self::replace_if_in_body(else_b);
+                }
+    
+                let mut new_cond = cond.clone();
+                new_cond.ty = Type::Bool;
+    
+                let assumption1 = Statement::Assume(new_cond.clone());
+                then_body.statements.insert(0, assumption1);
+    
+                let not = UOp::Not;
+                let expr = Expr {
+                    kind: Box::new(ExprKind::Unary(not, new_cond)),
+                    ty: Type::Bool,
+                    // Assuming you have span info in your Expr, copy it over.
+                    span: cond.span.clone(),
+                };
+                let assumption2 = Statement::Assume(expr);
+                if let Some(else_b) = else_body {
+                    else_b.statements.insert(0, assumption2);
+                }
+    
+                *stmt = Statement::Choice(then_body.clone(), else_body.clone().unwrap_or_default());
+            },
+            Statement::While { body: while_body, .. } => {
+                Self::replace_if_in_body(while_body);
+            },
+            Statement::Choice(choice_body1, choice_body2) => {
+                Self::replace_if_in_body(choice_body1);
+                Self::replace_if_in_body(choice_body2);
+            },
+            _ => {}
+        }
+    }
+    
+    fn replace_if_in_body(body: &mut Body) {
+        for stmt in &mut body.statements {
+            Self::replace_if_recursive(stmt);
+        }
+    }
+    
+    fn replace_if(doc: &mut Document) -> miette::Result<Document> {
         for item in &mut doc.items {
             if let DocumentItem::Method(method) = item {
                 if let Some(body) = &mut method.body {
-                    body.statements = body.statements.iter().map(|stmt| Self::encode_stmt(stmt)).collect();
+                    Self::replace_if_in_body(body);
                 }
             }
         }
         Ok(doc.clone())
-        
-    }
-
-    fn encode_stmt(stmt: &Statement) -> Statement {
-        match stmt {
-            Statement::If(cond, then, else_) => {
-                let mut _then = then.clone();
-                let mut _else_ = else_.clone().unwrap();
-                
-                let mut new_cond = cond.clone();
-                new_cond.ty = Type::Bool;
-                let assumption1 = Statement::Assume(new_cond);
-                _then.statements.insert(0, assumption1);
-
-                let not = UOp::Not;
-                let mut new_cond2 = cond.clone();
-                new_cond2.ty = Type::Bool;
-                let mut expr = cond.clone();
-                expr.kind = Box::new(ExprKind::Unary(not,new_cond2));
-                expr.ty = Type::Bool;
-                let assumption2 = Statement::Assume(expr.clone());
-                _else_.statements.insert(0, assumption2);
-
-                Statement::Choice(_then, _else_)
-            },
-            st => {
-                (st).clone()
-            }
-        }
     }
 
     fn insert_precondition_recursive(body: &mut Body, assumption: &Statement) {

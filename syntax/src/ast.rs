@@ -79,7 +79,7 @@ pub enum Specification {
 /// AST node for a sequence of statements.
 ///
 /// Bodies are delimited by `'{'` and `'}'`.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Body {
     /// The statements in the body
     pub statements: Vec<Statement>,
