@@ -156,8 +156,6 @@ impl Encode1Context {
                         let assumption = Statement::Assume(expr.clone());
                         if let Some(body) = &mut method.body {
                             Self::insert_precondition_recursive(body, &assumption);
-                        } else {
-                            todo!() // Handle the case where there's no body.
                         }
                     }
                 }
@@ -202,8 +200,6 @@ impl Encode1Context {
                         let assertion = Statement::Assert(expr.clone());
                         if let Some(body) = &mut method.body {
                             Self::insert_postcondition_recursive(body, &assertion);
-                        } else {
-                            todo!() // Handle the case where there's no body.
                         }
                     }
                 }

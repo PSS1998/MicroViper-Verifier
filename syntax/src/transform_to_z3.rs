@@ -28,6 +28,7 @@ impl transform_to_z3 {
         let mut new_doc = doc.clone(); // Create a mutable copy of the document
 
         let assumes_and_asserts_map = Self::collect_assumes_and_asserts(&mut new_doc)?;
+        println!("{assumes_and_asserts_map:#?}");
 
         let mut spans: Vec<Span> = Vec::new();
 
@@ -177,13 +178,17 @@ impl transform_to_z3 {
                     current_statements.push(stmt.clone());
                 },
                 Statement::If(_, if_body, opt_else_body) => {
-                    paths.append(&mut Self::collect_from_body(if_body, &mut current_statements));
+                    let mut if_paths = Self::collect_from_body(if_body, &mut current_statements.clone());
+                    paths.append(&mut if_paths);
+                    
                     if let Some(else_body) = opt_else_body {
-                        paths.append(&mut Self::collect_from_body(else_body, &mut current_statements));
+                        let mut else_paths = Self::collect_from_body(else_body, &mut current_statements.clone());
+                        paths.append(&mut else_paths);
                     }
                 },
                 Statement::While { body: while_body, .. } => {
-                    paths.append(&mut Self::collect_from_body(while_body, &mut current_statements));
+                    let mut while_paths = Self::collect_from_body(while_body, &mut current_statements.clone());
+                    paths.append(&mut while_paths);
                 },
                 Statement::Choice(choice_body1, choice_body2) => {
                     let mut path1 = Self::collect_from_body(choice_body1, &mut current_statements.clone());
@@ -198,6 +203,12 @@ impl transform_to_z3 {
     
         if paths.is_empty() {
             paths.push(current_statements);
+        } else {
+            for path in &mut paths {
+                if !path.is_empty(){
+                    path.extend_from_slice(&current_statements.clone());
+                }
+            }
         }
     
         paths
