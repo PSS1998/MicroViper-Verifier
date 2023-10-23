@@ -346,6 +346,21 @@ impl transform_to_z3 {
                         (Z3Ast::Int(lhs_val), Z3Ast::Int(rhs_val)) => lhs_val / rhs_val,
                         _ => panic!("Expected Int types for Divide operation"),
                     }),
+                    Op::Implies => Z3Ast::Bool(match (translated_lhs, translated_rhs) {
+                        (Z3Ast::Bool(lhs_val), Z3Ast::Bool(rhs_val)) => !lhs_val | rhs_val, // Implies can be translated to `!lhs || rhs`
+                        _ => panic!("Expected Bool types for Implies operation"),
+                    }),
+                    Op::Neq => Z3Ast::Bool(match (translated_lhs, translated_rhs) {
+                        (Z3Ast::Bool(lhs_val), Z3Ast::Bool(rhs_val)) => {
+                            let eq_expr = lhs_val._eq(&rhs_val);
+                            eq_expr.not()
+                        },
+                        (Z3Ast::Int(lhs_val), Z3Ast::Int(rhs_val)) => {
+                            let eq_expr = lhs_val._eq(&rhs_val);
+                            eq_expr.not()
+                        },
+                        _ => panic!("Incompatible types for Neq operation"),
+                    }),
                     _ => panic!("Unsupported binary operation"),
                 }
             }
