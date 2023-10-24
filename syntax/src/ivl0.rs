@@ -94,7 +94,7 @@ impl Encode0Context {
 
                         // Push new declaration
                         let mut new_expr = expr.clone();
-                        // new_expr = Encode0Context::syncExpression(&expr,&vars_hashmap);
+                        //new_expr = Encode0Context::syncExpression(&expr,&vars_hashmap);
 
                         new_expr = Encode0Context::syncExpression(&expr,&borrowed);
 
@@ -133,21 +133,26 @@ impl Encode0Context {
                 // NOTE: add sync in the shortest body !!!!!!!!!!!!!!!!!!!!!
 
                 // synchronizing vars
-                for var in vars_hashmap.keys(){
-                    let var_count_if = if_vars_hashmap.get(var); 
-                    let var_count_else = if_vars_hashmap.get(var);
-                    
-                    // let max = var_count_else.max(var_count_if);
-                    if let Some(max) = var_count_else.max(var_count_if){
 
-                        // set variable name
-                        let var_name = format!("{}{}", var, max);
-                        // find variable type
-                        let var_type = Encode0Context::getTypeFromVar(var.to_string(),fresh_statements.clone());
-                        // declaration for the max version of the variable
-                        // let max_ver_decl = Statement::Var( Var{ name: var_name, ty:var_type }, None  );
-                        //fresh_statements.insert(0, max_ver_decl)
-                    }
+                let borrowed_hashmap = vars_hashmap.clone();
+                for var in borrowed_hashmap.keys(){
+                    let var_count_if = if_vars_hashmap.get(var); 
+                    let var_count_else = else_vars_hashmap.get(var);
+
+                    println!("{var_count_if:#?}");
+                    println!("{var_count_else:#?}");
+                    
+                    
+                    let max = var_count_else.max(var_count_if);
+                    // if let Some(max) = var_count_else.max(var_count_if){
+
+                    //     // set variable name
+                    //     var_name = format!("{}{}", var, max);
+                    
+                    // }
+                    let var_name= format!("{}{}", var, max.unwrap()-1);
+                    println!("{var_name:#?}");
+                    
 
                     // TODO::::
                     // if var_count_if > var_count_else {
@@ -174,6 +179,46 @@ impl Encode0Context {
                     //     // Increment the counter for the variable.
                     //     *count += 1;
                     // }
+
+                    // helpers
+                    let var_type = Encode0Context::getTypeFromVar(var.to_string(),fresh_statements.clone());
+                    let empty_span = Span::zero();
+                    let new_ident = Ident{text:var_name, span: empty_span};
+
+                      
+                    // declaration for the max version of the variable
+                    //let max_ver_decl = Statement::Var( Var{ name: new_ident, ty:var_type }, None  );
+
+                    // expression representing the max ver of variable
+                    // let max_ver_expr = Expr{kind: Box::new(ExprKind::Var(new_ident)), span: empty_span, ty: var_type};
+
+
+                    if var_count_if.unwrap() > var_count_else.unwrap() {
+                        println!("path1");
+                        // expression representing the max ver of variable IN ELSE_BODY
+                        let tmp_exp2 = Expr{kind: Box::new(ExprKind::Var(Ident{text: format!("{}{}", var, var_count_else.unwrap()-1), span: empty_span})), span: empty_span, ty: var_type};
+                        // let new_kind = Box::new(ExprKind::Binary( max_ver_expr , Op::Eq, tmp_exp2  ));
+                        let assignment = Statement::Assignment(new_ident, tmp_exp2);
+                        new_body_else.statements.push(assignment);
+                    
+
+                    }
+                    else if  var_count_if.unwrap() < var_count_else.unwrap(){
+                        println!("path2");
+                        // expression representing the max ver of variable IN IF_BODY
+                        let tmp_exp2 = Expr{kind: Box::new(ExprKind::Var(Ident{text: format!("{}{}", var, var_count_if.unwrap()-1), span: empty_span})), span: empty_span, ty: var_type};
+                        // let new_kind = Box::new(ExprKind::Binary( max_ver_expr , Op::Eq, tmp_exp2  ));
+                        let assignment = Statement::Assignment(new_ident, tmp_exp2);
+                        new_body_if.statements.push(assignment);
+                    } 
+                    //update vars_hashmap
+
+                    if let Some(count) = vars_hashmap.get_mut(&var.to_string()) {
+
+                         // Increment the counter for the variable.
+                         *count = *max.unwrap()-1 + 1;
+                        //  *count += 1;
+                    }
 
 
 
@@ -227,7 +272,7 @@ impl Encode0Context {
     }
 
 
-    fn syncVar(var: Var, vars_hashmap: &mut HashMap<String, i32>) -> Var {
+    /* fn syncVar(var: Var, vars_hashmap: &mut HashMap<String, i32>) -> Var {
 
         let mut new_var = var.clone();
         let var_name = var.name.text.to_string();
@@ -249,7 +294,7 @@ impl Encode0Context {
 
         new_var
         
-    }
+    } */
 
 
     fn syncExpression(exp: &Expr, vars_hashmap: &HashMap<String, i32>) -> Expr {

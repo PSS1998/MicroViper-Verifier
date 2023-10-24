@@ -84,6 +84,11 @@ impl Encode1Context {
                 if let Some(else_b) = else_body {
                     else_b.statements.insert(0, assumption2);
                 }
+                else {
+                    let mut new_statements = Vec::new();
+                    new_statements.push(assumption2);
+                    *else_body = Some(Body { statements: new_statements});
+                }
     
                 *stmt = Statement::Choice(then_body.clone(), else_body.clone().unwrap_or_default());
             },

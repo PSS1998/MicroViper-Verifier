@@ -1,0 +1,12 @@
+method factorial(n: Int) returns (r: Int)
+  requires 0 <= n
+  ensures r > 0
+{
+    var t: Int
+    if (n == 0) {
+        r := 1 
+    } else {
+        t := factorial(n-1)
+        r := n * t
+    }
+}

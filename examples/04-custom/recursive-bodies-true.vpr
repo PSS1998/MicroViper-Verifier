@@ -1,0 +1,14 @@
+ method triple(x: Int, y: Int) 
+    requires x > 0 && y > 0
+    ensures x * x > 0 || x + y > 0
+ {
+    var star: Bool
+    if (star) {
+        if (x > 5) {
+            assert x * x > 25
+        }
+        assert x * x > 0
+    } else {
+        assert x + y > 0
+    }
+}
