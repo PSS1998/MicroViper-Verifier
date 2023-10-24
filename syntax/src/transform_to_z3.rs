@@ -173,43 +173,77 @@ impl transform_to_z3 {
         let mut current_statements = prev_statements.clone();
     
         for stmt in &body.statements {
+            println!("{paths:#?}");
             match stmt {
                 Statement::Assert(_) | Statement::Assume(_) => {
-                    current_statements.push(stmt.clone());
-                },
-                Statement::If(_, if_body, opt_else_body) => {
-                    let mut if_paths = Self::collect_from_body(if_body, &mut current_statements.clone());
-                    paths.append(&mut if_paths);
-                    
-                    if let Some(else_body) = opt_else_body {
-                        let mut else_paths = Self::collect_from_body(else_body, &mut current_statements.clone());
-                        paths.append(&mut else_paths);
+                    // current_statements.push(stmt.clone());
+                    // for path in &mut paths {
+                    //     path.push(stmt.clone());
+                    // }
+                    if paths.is_empty() {
+                        let mut path: Vec<Statement> = Vec::new();
+                        path.push(stmt.clone());
+                        paths.push(path);
+                    } else {
+                        for path in &mut paths {
+                            path.push(stmt.clone());
+                        }
                     }
                 },
-                Statement::While { body: while_body, .. } => {
-                    let mut while_paths = Self::collect_from_body(while_body, &mut current_statements.clone());
-                    paths.append(&mut while_paths);
-                },
                 Statement::Choice(choice_body1, choice_body2) => {
-                    let mut path1 = Self::collect_from_body(choice_body1, &mut current_statements.clone());
-                    let mut path2 = Self::collect_from_body(choice_body2, &mut current_statements.clone());
-    
-                    paths.append(&mut path1);
-                    paths.append(&mut path2);
+                    let mut paths1 = Self::collect_from_body(choice_body1, &mut current_statements.clone());
+                    let mut paths2 = Self::collect_from_body(choice_body2, &mut current_statements.clone());
+                    
+                    // paths.append(&mut path1);
+                    // paths.append(&mut path2);
+
+                    if paths.is_empty(){
+                        paths.extend(paths1);
+                        paths.extend(paths2);
+                    }
+                    else{
+
+
+                        let mut paths_copy = paths.clone();
+                        paths.clear();
+
+                        for path1 in &mut paths1 {
+                            for path_copy in &mut paths_copy {
+                                let mut new_path = path_copy.clone();
+                                new_path.extend(path1.clone());
+                                paths.push(new_path.clone());
+                            }
+                            // for path in &mut paths {
+                            //     path.extend(path1.clone());
+                            // }
+                        }
+                        for path2 in &mut paths2 {
+                            for path_copy in &mut paths_copy {
+                                let mut new_path = path_copy.clone();
+                                new_path.extend(path2.clone());
+                                // path_copy.extend(path2.clone());
+                                paths.push(new_path.clone());
+                            }
+                        }
+                    }
+
                 },
                 _ => {}
             }
         }
+
+        // paths.push(current_statements);
     
-        if paths.is_empty() {
-            paths.push(current_statements);
-        } else {
-            for path in &mut paths {
-                if !path.is_empty(){
-                    path.extend_from_slice(&current_statements.clone());
-                }
-            }
-        }
+        // if paths.is_empty() {
+        //     println!("should not be here");
+        //     paths.push(current_statements);
+        // } else {
+        //     for path in &mut paths {
+        //         if !path.is_empty(){
+        //             // path.extend_from_slice(&current_statements.clone());
+        //         }
+        //     }
+        // }
     
         paths
     }
@@ -226,6 +260,7 @@ impl transform_to_z3 {
                 } else {
                     Vec::new()
                 };
+                println!("{paths:#?}");
                 
                 // Assuming method has a name field or something similar
                 method_statements.insert(method.name.text.clone(), paths);
