@@ -74,7 +74,10 @@ impl Encode0Context {
 
             if let Statement::Assignment(ident,expr) = statement {
                 let ident_string = ident.text.to_string();
+
+                let borrowed = vars_hashmap.clone();
                     if let Some(count) = vars_hashmap.get_mut(&ident_string) {
+
                         // Increment the counter for the variable.
                         *count += 1;
 
@@ -83,10 +86,15 @@ impl Encode0Context {
                             text: format!("{}{}", ident_string, *count - 1),
                             span: ident.span, // Assuming the span remains the same
                         };
+                        
 
                         // Push new declaration
                         let mut new_expr = expr.clone();
-                        new_expr = Encode0Context::syncExpression(&expr,&vars_hashmap);
+                        // new_expr = Encode0Context::syncExpression(&expr,&vars_hashmap);
+
+                        new_expr = Encode0Context::syncExpression(&expr,&borrowed);
+
+
                         // Replace the assignment with the new variable name.
                         fresh_statements.push(Statement::Assignment(new_ident, new_expr));
                     }
@@ -122,7 +130,7 @@ impl Encode0Context {
                     let var_count_if = if_vars_hashmap.get(var); 
                     let var_count_else = if_vars_hashmap.get(var);
                     
-                    let max = var_count_else.max(var_count_if);
+                    // let max = var_count_else.max(var_count_if);
                     if let Some(max) = var_count_else.max(var_count_if){
 
                         // set variable name
@@ -130,26 +138,35 @@ impl Encode0Context {
                         // find variable type
                         let var_type = Encode0Context::getTypeFromVar(var.to_string(),fresh_statements.clone());
                         // declaration for the max version of the variable
-                        //let max_ver_decl = Statement::Var( Var{ name: var_name, ty:var_type }, None  );
+                        let max_ver_decl = Statement::Var( Var{ name: var_name, ty:var_type }, None  );
                         //fresh_statements.insert(0, max_ver_decl)
                     }
                     
+                    // TODO::::
+                    // if var_count_if > var_count_else {
+                    //     let assignment = Statement::Assignment(new_ident, new_expr);
+                    //     new_body_else.statements.push(assignment);
 
 
+                    //     // add the assignment at the end
+                    //     //new_body_else.statements.insert(0,Statement::Var)
+                    // }
+                    // else if  var_count_if < var_count_else{
+                    //     let assignment = Statement::Assignment(new_ident, new_expr);
+                    //     new_body_if.statements.push(assignment);
+                    //     // declaration for the max version of the variable
 
+                    //     // add the assignment at the end
+                    //     //new_body_else.statements.insert(0,Statement::Var)
+                    // } 
 
-                    /* if var_count_if > var_count_else {
+                    // // update vars_hashmap
 
+                    // if let Some(count) = vars_hashmap.get_mut(&ident_string) {
 
-                        // add the assignment at the end
-                        //new_body_else.statements.insert(0,Statement::Var)
-                    }
-                    else {
-                        // declaration for the max version of the variable
-
-                        // add the assignment at the end
-                        //new_body_else.statements.insert(0,Statement::Var)
-                    } */
+                    //     // Increment the counter for the variable.
+                    //     *count += 1;
+                    // }
 
 
 

@@ -7,19 +7,19 @@ fn main() -> Result<()> {
         let doc_ast = syntax::parse_file(p)?;
         println!("{doc_ast:#?}");
 
-        let new_doc_ast = syntax::encode0(doc_ast.clone())?;
+        let new_doc_ast = syntax::encode3(doc_ast.clone())?;
         println!("{new_doc_ast:#?}");
 
-        let new_new_doc_ast = syntax::encode1(new_doc_ast.clone())?;
+        let new_new_doc_ast = syntax::encode2(new_doc_ast.clone())?;
         println!("{new_new_doc_ast:#?}");
         
-        let new_new_new_doc_ast = syntax::encode2(new_new_doc_ast.clone())?;
+        let new_new_new_doc_ast = syntax::encode1(new_new_doc_ast.clone())?;
         println!("{new_new_new_doc_ast:#?}");
 
-        let new_new_new_new_doc_ast = syntax::encode3(new_new_new_doc_ast.clone())?;
+        let new_new_new_new_doc_ast = syntax::encode0(new_new_new_doc_ast.clone())?;
         println!("{new_new_new_new_doc_ast:#?}");
 
-        let new_new_new_new_new_doc_ast = syntax::encode4(new_new_new_new_doc_ast.clone())?;
+        let new_new_new_new_new_doc_ast = syntax::encode2z3(new_new_new_new_doc_ast.clone())?;
     }
 
     // // Z3 usage example
