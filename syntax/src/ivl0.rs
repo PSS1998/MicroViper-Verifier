@@ -138,10 +138,10 @@ impl Encode0Context {
                         // find variable type
                         let var_type = Encode0Context::getTypeFromVar(var.to_string(),fresh_statements.clone());
                         // declaration for the max version of the variable
-                        let max_ver_decl = Statement::Var( Var{ name: var_name, ty:var_type }, None  );
+                        // let max_ver_decl = Statement::Var( Var{ name: var_name, ty:var_type }, None  );
                         //fresh_statements.insert(0, max_ver_decl)
                     }
-                    
+
                     // TODO::::
                     // if var_count_if > var_count_else {
                     //     let assignment = Statement::Assignment(new_ident, new_expr);
