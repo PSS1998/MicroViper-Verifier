@@ -29,7 +29,7 @@ impl Encode3Context {
 
     fn havoc_variable(var: &Ident) -> (Statement, Var) {
         let havoc_ident = Ident {
-            text: format!("havoc_{}", var.text),
+            text: format!("{}", var.text),
             span: var.span.clone(),
         };
         let havoc_var = Var {

@@ -60,12 +60,18 @@ impl Encode0Context {
         
                 // declaration case
                 if !vars_hashmap.contains_key(&var_name) {
-                    // Insert the variable into the hashmap with an initial count of 0.
-                    vars_hashmap.insert(new_var.name.to_string(), 0);
+                    // Insert the variable into the hashmap with an initial count of 1.
+                    vars_hashmap.insert(new_var.name.to_string(), 1);
                     new_var.name = Ident {
                         text: format!("{}0", var_name),
                         span: var.name.span, // Assuming the span remains the same
                     };
+                }
+                else{
+                    if let Some(count) = vars_hashmap.get_mut(&new_var.name.text.to_string()) {
+                        // Increment the counter for the variable.
+                        *count += 1;
+                    }
                 }
 
                 fresh_statements.push(Statement::Var(new_var,expr.clone()));
@@ -78,12 +84,10 @@ impl Encode0Context {
                 let borrowed = vars_hashmap.clone();
                     if let Some(count) = vars_hashmap.get_mut(&ident_string) {
 
-                        // Increment the counter for the variable.
-                        *count += 1;
 
                         // Generate a new variable name with the count.
                         let new_ident = Ident {
-                            text: format!("{}{}", ident_string, *count - 1),
+                            text: format!("{}{}", ident_string, *count),
                             span: ident.span, // Assuming the span remains the same
                         };
                         
@@ -93,6 +97,9 @@ impl Encode0Context {
                         // new_expr = Encode0Context::syncExpression(&expr,&vars_hashmap);
 
                         new_expr = Encode0Context::syncExpression(&expr,&borrowed);
+
+                        // Increment the counter for the variable.
+                        *count += 1;
 
 
                         // Replace the assignment with the new variable name.

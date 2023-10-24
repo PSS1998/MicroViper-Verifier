@@ -28,7 +28,7 @@ impl transform_to_z3 {
         let mut new_doc = doc.clone(); // Create a mutable copy of the document
 
         let assumes_and_asserts_map = Self::collect_assumes_and_asserts(&mut new_doc)?;
-        println!("{assumes_and_asserts_map:#?}");
+        // println!("{assumes_and_asserts_map:#?}");
 
         let mut spans: Vec<Span> = Vec::new();
 
@@ -173,7 +173,7 @@ impl transform_to_z3 {
         let mut current_statements = prev_statements.clone();
     
         for stmt in &body.statements {
-            println!("{paths:#?}");
+            // println!("{paths:#?}");
             match stmt {
                 Statement::Assert(_) | Statement::Assume(_) => {
                     // current_statements.push(stmt.clone());
@@ -260,7 +260,7 @@ impl transform_to_z3 {
                 } else {
                     Vec::new()
                 };
-                println!("{paths:#?}");
+                // println!("{paths:#?}");
                 
                 // Assuming method has a name field or something similar
                 method_statements.insert(method.name.text.clone(), paths);
@@ -312,6 +312,7 @@ impl transform_to_z3 {
             // EK::Integer(i) => Z3Ast::Int(Int::from_str(ctx, &i.to_string())),
             EK::Integer(i) => Z3Ast::Int(Int::from_str(ctx, &i.to_string()).unwrap()),
             EK::Var(ident) => {
+                // println!("{expr:#?}"); 
                 match expr.ty {
                     Type::Bool => Z3Ast::Bool(Bool::new_const(ctx, &*ident.text)),
                     Type::Int => Z3Ast::Int(Int::new_const(ctx, &*ident.text)),
