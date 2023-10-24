@@ -13,8 +13,8 @@ use std::collections::HashMap;
 struct transform_to_z3 {
 }
 
-pub(crate) fn encode(doc: &Document) -> miette::Result<Document> {
-    transform_to_z3::encode(doc)
+pub(crate) fn encode(doc: &Document, source: &str) -> miette::Result<Document> {
+    transform_to_z3::encode(doc, source)
 }
 
 #[derive(Clone, Debug)]
@@ -24,7 +24,7 @@ enum Z3Ast<'a> {
 }
 
 impl transform_to_z3 {
-    fn encode(doc: & Document) -> miette::Result<Document> {        
+    fn encode(doc: & Document, source: &str) -> miette::Result<Document> {        
         let mut new_doc = doc.clone(); // Create a mutable copy of the document
 
         let assumes_and_asserts_map = Self::collect_assumes_and_asserts(&mut new_doc)?;
@@ -117,6 +117,9 @@ impl transform_to_z3 {
         } else {
             println!("Unverified");
             println!("{spans:#?}");
+            for span in spans {
+                Self::print_error_in_source(source, span)
+            }
         }
 
         // println!("{assumes_and_asserts:#?}");
@@ -502,6 +505,31 @@ impl transform_to_z3 {
         }
     
         result_spans
+    }
+
+    fn print_error_in_source(source: &str, span: Span) {
+        // Split source into lines
+        let lines: Vec<&str> = source.split('\n').collect();
+    
+        // Find which line the error starts on
+        let mut current_position = 0;
+        for (line_number, line) in lines.iter().enumerate() {
+            // Check if the error starts on this line
+            if current_position + line.len() >= span.start() {
+                // Print the line with the error
+                println!("Line {}: {}", line_number + 1, line);
+    
+                // Print an indicator of where the error is
+                let start_column = span.start() - current_position;
+                let end_column = usize::min(line.len(), span.end() - current_position);
+                let indicator = " ".repeat(start_column) + &"^".repeat(end_column - start_column);
+                println!("{}", indicator);
+                break;
+            }
+    
+            // Update the current position
+            current_position += line.len() + 1; // +1 for newline character
+        }
     }
     
 }

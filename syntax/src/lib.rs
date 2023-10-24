@@ -83,6 +83,6 @@ pub fn encode0(ast: ast::Document) -> miette::Result<ast::Document> {
     ivl0::encode(&ast)
 }
 
-pub fn encode2z3(ast: ast::Document) -> miette::Result<ast::Document> {
-    transform_to_z3::encode(&ast)
+pub fn encode2z3(ast: ast::Document, source: &str) -> miette::Result<ast::Document> {
+    transform_to_z3::encode(&ast, source)
 }
