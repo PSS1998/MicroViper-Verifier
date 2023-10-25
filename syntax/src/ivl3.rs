@@ -1,6 +1,6 @@
 use crate::ast::{
     // IF ELSE dependences
-    Body, Document, DocumentItem, Expr, Statement, ExprKind, UOp, Var, Type
+    Body, Document, DocumentItem, Expr, Statement, ExprKind, UOp, Var, Type, Method
 };
 use std::cmp::Ord;
 
@@ -26,7 +26,7 @@ impl Encode3Context {
         (var_declaration, var.clone())
     }
 
-    fn get_written_variables(body: &Body) -> Vec<Var> {
+    fn get_written_variables(body: &Body, methods: &mut [Method]) -> Vec<Var> {
         let mut written_vars = Vec::new();
     
         for stmt in &body.statements {
@@ -34,21 +34,24 @@ impl Encode3Context {
                 Statement::Assignment(ident, expr) => {
                     written_vars.push(Var{name: ident.clone(), ty: expr.ty});
                 }
-                Statement::MethodAssignment(idents, _, exprs) => {
-                    for i in 0..idents.len() {
-                        written_vars.push(Var{name: idents[i].clone(), ty: exprs[i].ty});
+                Statement::MethodAssignment(idents, method_name, _) => {
+                    if let Some(index) = methods.iter().position(|m| m.name.text == method_name.text) {
+                        let method = &mut methods[index];
+                        for i in 0..idents.len() {
+                            written_vars.push(Var{name: idents[i].clone(), ty: method.outputs[index].ty});
+                        }
                     }
                 }
                 Statement::If(_, then_body, Some(else_body)) => {
-                    written_vars.extend(Self::get_written_variables(then_body));
-                    written_vars.extend(Self::get_written_variables(else_body));
+                    written_vars.extend(Self::get_written_variables(then_body, methods));
+                    written_vars.extend(Self::get_written_variables(else_body, methods));
                 }
                 Statement::While { body: while_body, .. } => {
-                    written_vars.extend(Self::get_written_variables(while_body));
+                    written_vars.extend(Self::get_written_variables(while_body, methods));
                 }
                 Statement::Choice(body1, body2) => {
-                    written_vars.extend(Self::get_written_variables(body1));
-                    written_vars.extend(Self::get_written_variables(body2));
+                    written_vars.extend(Self::get_written_variables(body1, methods));
+                    written_vars.extend(Self::get_written_variables(body2, methods));
                 }
                 _ => {}
             }
@@ -61,14 +64,14 @@ impl Encode3Context {
         written_vars
     }
     
-    fn replace_while_recursive(stmt: &mut Statement) {
+    fn replace_while_recursive(stmt: &mut Statement, methods: &mut [Method]) {
         match stmt {
             Statement::While { condition, invariants, body } => {
                 let condition = condition.clone();
                 let mut invariants = invariants.clone();
                 let mut new_body = body.clone();
 
-                let written_vars = Self::get_written_variables(body); 
+                let written_vars = Self::get_written_variables(body, methods); 
     
                 let mut transformed_statements = Vec::new();
     
@@ -116,31 +119,39 @@ impl Encode3Context {
                 *stmt = Statement::Choice(choice_body.clone(), choice_body.clone());
                 
                 // After transforming the current while, process its body for nested statements.
-                Self::replace_while_in_body(&mut new_body);
+                Self::replace_while_in_body(&mut new_body, methods);
             },
             Statement::If(_, then_body, Some(else_body)) => {
-                Self::replace_while_in_body(then_body);
-                Self::replace_while_in_body(else_body);
+                Self::replace_while_in_body(then_body, methods);
+                Self::replace_while_in_body(else_body, methods);
             },
             Statement::Choice(body1, body2) => {
-                Self::replace_while_in_body(body1);
-                Self::replace_while_in_body(body2);
+                Self::replace_while_in_body(body1, methods);
+                Self::replace_while_in_body(body2, methods);
             },
             _ => {}
         }
     }
     
-    fn replace_while_in_body(body: &mut Body) {
+    fn replace_while_in_body(body: &mut Body, methods: &mut [Method]) {
         for stmt in &mut body.statements {
-            Self::replace_while_recursive(stmt);
+            Self::replace_while_recursive(stmt, methods);
         }
     }
     
     fn replace_while(doc: &mut Document) -> miette::Result<Document> {
+        let mut methods: Vec<_> = doc.items.iter().cloned().filter_map(|item| {
+            if let DocumentItem::Method(method) = item {
+                Some(method)
+            } else {
+                None
+            }
+        }).collect();
+        
         for item in &mut doc.items {
             if let DocumentItem::Method(method) = item {
                 if let Some(body) = &mut method.body {
-                    Self::replace_while_in_body(body);
+                    Self::replace_while_in_body(body, &mut methods[..]);
                 }
             }
         }

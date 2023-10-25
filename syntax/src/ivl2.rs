@@ -56,7 +56,7 @@ impl Encode2Context {
     
                     // Havoc return variables
                     for index in 0..idents.len() {
-                        replaced_statements.push(Self::havoc_variable(&Var{name: idents[index].clone(), ty: args[index].ty}).0);
+                        replaced_statements.push(Self::havoc_variable(&Var{name: idents[index].clone(), ty: method.outputs[index].ty}).0);
                     }
     
                     // for output parameters and ensures
