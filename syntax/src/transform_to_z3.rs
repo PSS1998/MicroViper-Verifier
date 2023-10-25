@@ -116,6 +116,14 @@ impl transform_to_z3 {
             println!("Verified");
         } else {
             println!("Unverified");
+            let mut unique_spans = Vec::new();
+            let mut seen = HashSet::new();
+            for span in spans.iter() {
+                if seen.insert(span.clone()) {
+                    unique_spans.push(span.clone());
+                }
+            }
+            spans = unique_spans;
             println!("{spans:#?}");
             for span in spans {
                 Self::print_error_in_source(source, span)
