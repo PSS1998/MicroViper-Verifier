@@ -1,6 +1,6 @@
-# 02245-rust-template
+# 02245-rust-project-a
 
-A Rust template for working on project A of the course [02245 — Program Verification](http://courses.compute.dtu.dk/02245/). It includes a parser and static analyzer for the input format *MicroViper* (see example below), with nice error reporting.
+A Rust implementation of project A of the course [02245 — Program Verification](http://courses.compute.dtu.dk/02245/). It includes a parser, static analyzer for the input format *MicroViper* (see example below), with nice error reporting, and program verification.
 
 ```vpr
 method sum(n: Int) returns (res: Int)
@@ -21,7 +21,7 @@ method sum(n: Int) returns (res: Int)
 
 ## Getting started
 
-For building the template, you will need to have the following installed:
+For building the project, you will need to have the following installed:
 
 - [Rust](https://www.rust-lang.org/tools/install) (v1.63 or later)
 - [CMake](https://cmake.org/install/)
@@ -59,3 +59,6 @@ $ rustup-init
     $ cargo run examples/**/*.vpr
     ```
     - The main function returns [`miette::Result<()>`](https://docs.rs/miette/latest/miette/type.Result.html), which allows the [try operator (`?`)](https://blog.rust-lang.org/2016/11/10/Rust-1.13.html#the--operator) to be used in main and possibly in the rest of the project to get nice error reporting. Read the [miette docs](https://docs.rs/miette/latest/miette/index.html) for more details.
+- `syntax/src/ivl*.rs` and `syntax/src/transform_to_z3.rs` are responsible for program verification. Each of them corresponds to one layer of encoding. 
+- `report/Report.pdf` contains an extensive documentation on the project.
+- `test/test.py` can run all the testcases from `examples/` folder.
