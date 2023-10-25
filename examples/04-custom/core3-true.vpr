@@ -1,0 +1,8 @@
+method main() {
+
+  while (true) {
+    assert true
+  }
+
+  assert false // VERIFIES due to partial correctness reasoning
+}
