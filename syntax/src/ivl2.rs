@@ -50,7 +50,7 @@ impl Encode2Context {
                     // for input parameters
                     for (index, var) in method.inputs.iter().enumerate() {
                         let replaced_function_input_variable = Ident {
-                            text: format!("replaced_function_input_variable_{}", index),
+                            text: format!("{}_input_var_{}", method.name.text, index),
                             span: var.name.span.clone(),
                         };
                         replaced_statements.push(Statement::Var(Var {
@@ -80,13 +80,13 @@ impl Encode2Context {
                         for spec in &mut method.specifications {
                             if let Specification::Ensures(expr) = spec {
                                 let replaced_function_output_variable = Ident {
-                                    text: format!("replaced_function_output_variable_{}", output_offset + index),
+                                    text: format!("{}_output_var_{}", method.name.text, output_offset + index),
                                     span: var.name.span.clone(),
                                 };
                                 *expr = Self::replace_variable(expr.clone(), &var.name, &idents[index]);
                                 for (index, var) in method.inputs.iter().enumerate() {
                                     let replaced_function_input_variable = Ident {
-                                        text: format!("replaced_function_input_variable_{}", index),
+                                        text: format!("{}_input_var_{}", method.name.text, index),
                                         span: var.name.span.clone(),
                                     };
                                     
