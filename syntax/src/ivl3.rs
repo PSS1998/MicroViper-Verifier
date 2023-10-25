@@ -134,7 +134,11 @@ impl Encode3Context {
                     span: condition.span.clone(),
                     ty: Type::Bool,
                 };
-                *stmt = Statement::If(true_expr, Body { statements: transformed_statements }, None);
+
+                let choice_body = Body { statements: transformed_statements.clone() };
+                *stmt = Statement::Choice(choice_body.clone(), choice_body.clone());
+                
+                // *stmt = Statement::If(true_expr, Body { statements: transformed_statements }, None);
 
                 // After transforming the current while, process its body for nested statements.
                 Self::replace_while_in_body(&mut new_body);

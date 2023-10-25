@@ -102,7 +102,8 @@ impl Encode2Context {
                         span: Span::zero(), // TODO: fix this
                         ty: Type::Bool,
                     };
-                    *stmt = Statement::If(true_expr, Body { statements: replaced_statements }, None);
+                    let choice_body = Body { statements: replaced_statements.clone() };
+                    *stmt = Statement::Choice(choice_body.clone(), choice_body.clone());
                 }
             },
             Statement::If(_, then_body, Some(else_body)) => {
