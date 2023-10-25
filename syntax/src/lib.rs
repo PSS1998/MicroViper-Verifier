@@ -67,22 +67,28 @@ pub fn parse_file(f: impl AsRef<std::path::Path>) -> miette::Result<ast::Documen
 /// # Ok(())
 /// # }
 /// ```
+pub fn parse_src(src: impl AsRef<str>) -> miette::Result<ast::Document> {
+    let src = src.as_ref();
+    let ast = parse::parse_document(src)?;
+    sem::analyze(&ast).map_err(|e| e.with_source_code(src.to_string()))
+}
+/// Encode to level 3
 pub fn encode3(ast: ast::Document) -> miette::Result<ast::Document> {
     ivl3::encode(&ast)
 }
-
+/// Encode to level 2
 pub fn encode2(ast: ast::Document) -> miette::Result<ast::Document> {
     ivl2::encode(&ast)
 }
-
+/// Encode to level 1
 pub fn encode1(ast: ast::Document) -> miette::Result<ast::Document> {
     ivl1::encode(&ast)
 }
-
+/// Encode to level 0
 pub fn encode0(ast: ast::Document) -> miette::Result<ast::Document> {
     ivl0::encode(&ast)
 }
-
+/// Encode to z3
 pub fn encode2z3(ast: ast::Document, source: &str) -> miette::Result<ast::Document> {
     transform_to_z3::encode(&ast, source)
 }

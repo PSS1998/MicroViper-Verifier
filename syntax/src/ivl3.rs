@@ -1,11 +1,8 @@
 use crate::ast::{
     // IF ELSE dependences
-    Body, Document, DocumentItem, Expr, Specification, Statement,ExprKind,UOp,Var, Span, Ident,Type::Int,Type, EK
+    Body, Document, DocumentItem, Expr, Statement, ExprKind, UOp, Var, Type
 };
-use std::collections::HashMap;
-use std::collections::HashSet;
 use std::cmp::Ord;
-use regex::Regex;
 
 /// 
 #[derive(Debug)]
@@ -21,39 +18,25 @@ impl Encode3Context {
         let mut new_doc = doc.clone(); // Create a mutable copy of the document
         new_doc = Self::replace_while(&mut new_doc)?;
 
-        // TODO: replace all havoc variables
-        // new_doc = Self::replace_all_havoc_variables(&mut new_doc)?;
-
         Ok(new_doc)
     }
 
-    fn havoc_variable(var: &Ident) -> (Statement, Var) {
-        let havoc_ident = Ident {
-            text: format!("{}", var.text),
-            span: var.span.clone(),
-        };
-        let havoc_var = Var {
-            name: havoc_ident,
-            ty: Type::Int, // TODO: should be the same type as the variable
-        };
-        let var_declaration = Statement::Var(havoc_var.clone(), None);
-        (var_declaration, havoc_var)
+    fn havoc_variable(var: &Var) -> (Statement, Var) {
+        let var_declaration = Statement::Var(var.clone(), None);
+        (var_declaration, var.clone())
     }
 
-    fn get_written_variables(body: &Body) -> Vec<Ident> {
+    fn get_written_variables(body: &Body) -> Vec<Var> {
         let mut written_vars = Vec::new();
     
         for stmt in &body.statements {
             match stmt {
-                // Statement::Var(var, _) => {
-                //     written_vars.push(var.0.clone()); // Declaring a variable can be seen as writing to it.
-                // }
-                Statement::Assignment(ident, _) => {
-                    written_vars.push(ident.clone());
+                Statement::Assignment(ident, expr) => {
+                    written_vars.push(Var{name: ident.clone(), ty: expr.ty});
                 }
-                Statement::MethodAssignment(idents, _, _) => {
-                    for ident in idents {
-                        written_vars.push(ident.clone());
+                Statement::MethodAssignment(idents, _, exprs) => {
+                    for i in 0..idents.len() {
+                        written_vars.push(Var{name: idents[i].clone(), ty: exprs[i].ty});
                     }
                 }
                 Statement::If(_, then_body, Some(else_body)) => {
@@ -72,8 +55,8 @@ impl Encode3Context {
         }
     
         // Remove duplicates
-        written_vars.sort_by(|a, b| a.text.cmp(&b.text));
-        written_vars.dedup_by(|a, b| a.text == b.text);
+        written_vars.sort_by(|a, b| a.name.text.cmp(&b.name.text));
+        written_vars.dedup_by(|a, b| a.name.text == b.name.text);
     
         written_vars
     }
@@ -94,7 +77,7 @@ impl Encode3Context {
                 }
     
                 for var in &written_vars {
-                    let (havoc_stmt, havoc_var) = Self::havoc_variable(var);
+                    let (havoc_stmt, _havoc_var) = Self::havoc_variable(var);
                     transformed_statements.push(havoc_stmt);
                 }
     
@@ -128,18 +111,10 @@ impl Encode3Context {
                 };
     
                 transformed_statements.push(Statement::Choice(body1, body2));
-    
-                let true_expr = Expr {
-                    kind: Box::new(ExprKind::Boolean(true)),
-                    span: condition.span.clone(),
-                    ty: Type::Bool,
-                };
 
                 let choice_body = Body { statements: transformed_statements.clone() };
                 *stmt = Statement::Choice(choice_body.clone(), choice_body.clone());
                 
-                // *stmt = Statement::If(true_expr, Body { statements: transformed_statements }, None);
-
                 // After transforming the current while, process its body for nested statements.
                 Self::replace_while_in_body(&mut new_body);
             },

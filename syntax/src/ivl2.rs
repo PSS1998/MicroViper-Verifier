@@ -1,11 +1,7 @@
 use crate::ast::{
-    // IF ELSE dependences
-    Body, Document, DocumentItem, Expr, Specification, Statement, ExprKind, UOp, Var, Span, Ident, Type::Int,Type, EK, Method
+    Body, Document, DocumentItem, Expr, Specification, Statement, Var, Ident, EK, Method
 };
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::cmp::Ord;
-use regex::Regex;
+
 
 /// 
 #[derive(Debug)]
@@ -21,30 +17,19 @@ impl Encode2Context {
         let mut new_doc = doc.clone(); // Create a mutable copy of the document
         new_doc = Self::replace_methods(&mut new_doc)?;
 
-        // TODO: replace all havoc variables
-        // new_doc = Self::replace_all_havoc_variables(&mut new_doc)?;
-
         Ok(new_doc)
     }
 
-    fn havoc_variable(var: &Ident) -> (Statement, Var) {
-        let havoc_ident = Ident {
-            text: format!("{}", var.text),
-            span: var.span.clone(),
-        };
-        let havoc_var = Var {
-            name: havoc_ident,
-            ty: Type::Int, // TODO: should be the same type as the variable
-        };
-        let var_declaration = Statement::Var(havoc_var.clone(), None);
-        (var_declaration, havoc_var)
+    fn havoc_variable(var: &Var) -> (Statement, Var) {
+        let var_declaration = Statement::Var(var.clone(), None);
+        (var_declaration, var.clone())
     }
 
     fn replace_methods_recursive(stmt: &mut Statement, methods: &mut [Method]) {
         match stmt {
             Statement::MethodAssignment(idents, method_name, args) => {
                 if let Some(index) = methods.iter().position(|m| m.name.text == method_name.text) {
-                    let mut method = &mut methods[index];
+                    let method = &mut methods[index];
                     let mut replaced_statements = Vec::new();
     
                     // for input parameters
@@ -70,19 +55,14 @@ impl Encode2Context {
                     }                    
     
                     // Havoc return variables
-                    for ident in &mut *idents {
-                        replaced_statements.push(Self::havoc_variable(ident).0);
+                    for index in 0..idents.len() {
+                        replaced_statements.push(Self::havoc_variable(&Var{name: idents[index].clone(), ty: args[index].ty}).0);
                     }
     
                     // for output parameters and ensures
-                    let output_offset = method.inputs.len();
                     for (index, var) in method.outputs.iter().enumerate() {
                         for spec in &mut method.specifications {
                             if let Specification::Ensures(expr) = spec {
-                                let replaced_function_output_variable = Ident {
-                                    text: format!("{}_output_var_{}", method.name.text, output_offset + index),
-                                    span: var.name.span.clone(),
-                                };
                                 *expr = Self::replace_variable(expr.clone(), &var.name, &idents[index]);
                                 for (index, var) in method.inputs.iter().enumerate() {
                                     let replaced_function_input_variable = Ident {
@@ -97,11 +77,6 @@ impl Encode2Context {
                         }
                     }
     
-                    let true_expr = Expr {
-                        kind: Box::new(ExprKind::Boolean(true)),
-                        span: Span::zero(), // TODO: fix this
-                        ty: Type::Bool,
-                    };
                     let choice_body = Body { statements: replaced_statements.clone() };
                     *stmt = Statement::Choice(choice_body.clone(), choice_body.clone());
                 }

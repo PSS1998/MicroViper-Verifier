@@ -1,9 +1,6 @@
 use crate::ast::{
-    // IF ELSE dependences
     Body, Document, DocumentItem, Expr, Specification, Statement, ExprKind, UOp, Op, Type, EK
 };
-
-
 
 /// 
 #[derive(Debug)]
@@ -22,7 +19,6 @@ impl Encode1Context {
 
         Self::replace_if(&mut new_doc)?;
 
-        // Self::replace_assignments_with_assume(&mut new_doc)?;
         Self::replace_var_with_expr(&mut new_doc)?;
 
         Self::add_postcondition(&mut new_doc)?;
@@ -77,7 +73,6 @@ impl Encode1Context {
                 let expr = Expr {
                     kind: Box::new(ExprKind::Unary(not, new_cond)),
                     ty: Type::Bool,
-                    // Assuming you have span info in your Expr, copy it over.
                     span: cond.span.clone(),
                 };
                 let assumption2 = Statement::Assume(expr);
@@ -163,68 +158,6 @@ impl Encode1Context {
         Ok(doc.clone())
     }
 
-
-
-    // fn replace_assignments_with_assume_recursive(body: &mut Body) {
-    //     let mut new_statements = Vec::new();
-    //     for statement in &body.statements {
-    //         match statement {
-    //             Statement::Assignment(ident, expr) => {
-    //                 let new_ident = Expr {
-    //                     kind: Box::new(ExprKind::Var(ident.clone())),
-    //                     span: expr.span.clone(),
-    //                     ty: expr.ty.clone(),
-    //                 };
-    //                 let new_binary = ExprKind::Binary(new_ident.clone(), Op::Eq, expr.clone());
-    //                 let mut new_expr = expr.clone();
-    //                 new_expr.kind = Box::new(new_binary);
-    //                 new_expr.ty = Type::Bool;
-    //                 let assumption = Statement::Assume(new_expr);
-    //                 new_statements.push(assumption);
-    //             }
-    //             Statement::If(expr, if_body, opt_else_body) => {
-    //                 let mut new_if_body = if_body.clone();
-    //                 Self::replace_assignments_with_assume_recursive(&mut new_if_body);
-    //                 let new_else_body = opt_else_body.as_ref().map(|else_body| {
-    //                     let mut cloned_else_body = else_body.clone();
-    //                     Self::replace_assignments_with_assume_recursive(&mut cloned_else_body);
-    //                     cloned_else_body
-    //                 });
-    //                 new_statements.push(Statement::If(expr.clone(), new_if_body, new_else_body));
-    //             }
-    //             Statement::While { condition, invariants, body } => {
-    //                 let mut new_body = body.clone();
-    //                 Self::replace_assignments_with_assume_recursive(&mut new_body);
-    //                 new_statements.push(Statement::While {
-    //                     condition: condition.clone(),
-    //                     invariants: invariants.clone(),
-    //                     body: new_body,
-    //                 });
-    //             }
-    //             Statement::Choice(body1, body2) => {
-    //                 let mut new_body1 = body1.clone();
-    //                 let mut new_body2 = body2.clone();
-    //                 Self::replace_assignments_with_assume_recursive(&mut new_body1);
-    //                 Self::replace_assignments_with_assume_recursive(&mut new_body2);
-    //                 new_statements.push(Statement::Choice(new_body1, new_body2));
-    //             }
-    //             _ => new_statements.push(statement.clone()),
-    //         }
-    //     }
-    //     body.statements = new_statements;
-    // }
-    
-    // fn replace_assignments_with_assume(doc: &mut Document) -> miette::Result<Document> {
-    //     for item in &mut doc.items {
-    //         if let DocumentItem::Method(method) = item {
-    //             if let Some(body) = &mut method.body {
-    //                 Self::replace_assignments_with_assume_recursive(body);
-    //             }
-    //         }
-    //     }
-    //     Ok(doc.clone())
-    // }
-    
     fn replace_var_with_expr_recursive(body: &mut Body) {
         let mut new_statements = Vec::new();
         for statement in &body.statements {
