@@ -1,4 +1,4 @@
-# 02245-rust-project-a
+# 02245-rust-project-a (MicroViper Verifier)
 
 A Rust implementation of project A of the course [02245 — Program Verification](http://courses.compute.dtu.dk/02245/). It includes a parser, static analyzer for the input format *MicroViper* (see example below), with nice error reporting, and program verification.
 
