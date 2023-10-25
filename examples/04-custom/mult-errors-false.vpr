@@ -1,0 +1,6 @@
+method multerrors(n: Int) returns (res: Int)
+{
+  assert n == 2
+  assert n > 0
+  assert n < 0
+}

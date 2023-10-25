@@ -1,0 +1,5 @@
+method contrassume(n: Int) returns (res: Int)
+{
+  assume n == 2
+  assume n == 3
+}

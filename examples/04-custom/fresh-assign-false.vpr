@@ -1,0 +1,7 @@
+method freshassign(n: Int) returns (res: Int)
+{
+  var x: Int := 0
+  x := 2
+  x := 3
+  assert x == 2
+}
